@@ -4,7 +4,7 @@ import { useEffect, useState, useCallback } from "react"
 import axios from "axios"
 import { Plus, Edit, Trash2, Car, DollarSign, Package, X } from "lucide-react"
 
-const API_URL = "http://localhost:8080/api/v1/cars"
+const API_URL = "https://car-manager-kqaj.onrender.com/api/v1/cars"
 
 const styles = {
   container: {
