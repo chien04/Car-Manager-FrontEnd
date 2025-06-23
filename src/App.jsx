@@ -7,7 +7,7 @@ import BrandManager from './components/BrandManager';
 import RentalManager from "./components/RentalManager";
 import UserManager from "./components/UserManager";
 import { Car, Users, Building2, FileText, Menu, X } from "lucide-react"
-import "./app.css" // Import CSS
+import "./App.css" // Import CSS
 
 export default function App() {
   const [activeTab, setActiveTab] = useState("rentals")
