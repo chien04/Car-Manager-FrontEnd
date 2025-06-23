@@ -1,42 +1,93 @@
+/* Reset CSS cho layout mới - FIX SCROLL */
 #root {
-  max-width: 1280px;
-  margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  margin: 0;
+  padding: 0;
+  width: 100%;
+  min-height: 100vh; /* Thay đổi từ height thành min-height */
+  /* Bỏ overflow: hidden */
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* Responsive styles cho sidebar */
+@media (max-width: 768px) {
+  .mobile-menu-button {
+    display: block !important;
+  }
+
+  .main {
+    margin-left: 0 !important;
+  }
+
+  .sidebar {
+    left: -280px !important;
+  }
+
+  .sidebar-open {
+    left: 0 !important;
+  }
 }
 
-@keyframes logo-spin {
+@media (min-width: 769px) {
+  .sidebar {
+    left: 0 !important;
+  }
+}
+
+/* Enhanced hover effects */
+.nav-button:hover:not(.nav-button-active) {
+  background-color: rgba(255, 255, 255, 0.1);
+  color: white;
+  transform: translateX(4px);
+}
+
+.nav-button::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  height: 100%;
+  width: 3px;
+  background: linear-gradient(135deg, #3b82f6, #1d4ed8);
+  transform: scaleY(0);
+  transition: transform 0.2s ease;
+}
+
+.nav-button-active::before {
+  transform: scaleY(1);
+}
+
+.mobile-menu-button:hover {
+  background-color: #2563eb;
+  transform: scale(1.05);
+}
+
+.mobile-menu-button:active {
+  transform: scale(0.95);
+}
+
+/* Smooth animations */
+@keyframes slideIn {
   from {
-    transform: rotate(0deg);
+    opacity: 0;
+    transform: translateX(-20px);
   }
   to {
-    transform: rotate(360deg);
+    opacity: 1;
+    transform: translateX(0);
   }
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+.nav-button {
+  animation: slideIn 0.3s ease-out;
 }
 
-.card {
-  padding: 2em;
+/* Fix scroll cho main content */
+.main {
+  overflow-y: auto !important;
+  max-height: 100vh !important;
 }
 
-.read-the-docs {
-  color: #888;
+/* Fix scroll cho tables */
+.table-container {
+  max-height: 70vh;
+  overflow-y: auto;
 }

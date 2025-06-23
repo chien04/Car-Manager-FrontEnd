@@ -5,7 +5,7 @@ import axios from "axios"
 import { Plus, Edit2, Trash2, Save, X, Car, Globe } from "lucide-react"
 
 const API_URL = "https://car-manager-kqaj.onrender.com/api/v1/brands"
-
+// const API_URL = "http://localhost:8080/api/v1/brands";
 function BrandManager() {
   const [brands, setBrands] = useState([])
   const [newBrand, setNewBrand] = useState({ name: "", country: "" })

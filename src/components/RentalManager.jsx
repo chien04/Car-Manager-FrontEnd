@@ -8,6 +8,9 @@ const RENTAL_API = "https://car-manager-kqaj.onrender.com/api/v1/rentals"
 const CAR_API = "https://car-manager-kqaj.onrender.com/api/v1/cars"
 const USER_API = "https://car-manager-kqaj.onrender.com/api/v1/users"
 
+// const RENTAL_API = "http://localhost:8080/api/v1/rentals"
+// const CAR_API = "http://localhost:8080/api/v1/cars"
+// const USER_API = "http://localhost:8080/api/v1/users"
 function RentalManager() {
   const [rentals, setRentals] = useState([])
   const [cars, setCars] = useState([])
