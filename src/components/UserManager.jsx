@@ -13,6 +13,9 @@ function UserManager() {
   const [editingUser, setEditingUser] = useState(null)
   const [editUserData, setEditUserData] = useState({ userName: "", password: "" })
   const [loading, setLoading] = useState(false)
+  const [addingUser, setAddingUser] = useState(false)
+  const [updatingUser, setUpdatingUser] = useState(false)
+  const [deletingUserId, setDeletingUserId] = useState(null)
   const [error, setError] = useState(null)
   const [showPassword, setShowPassword] = useState({})
   const [expandedUser, setExpandedUser] = useState(null)
@@ -27,8 +30,9 @@ function UserManager() {
     try {
       const res = await axios.get(API_URL)
       setUsers(res.data)
-    } catch {
+    } catch (err) {
       setError("Lỗi khi lấy danh sách người dùng!")
+      console.error("Fetch users error:", err)
     } finally {
       setLoading(false)
     }
@@ -40,21 +44,30 @@ function UserManager() {
 
   const handleAddUser = async (e) => {
     e.preventDefault()
-    setLoading(true)
+    if (!newUser.userName.trim() || !newUser.password.trim()) {
+      setError("Vui lòng điền đầy đủ thông tin!")
+      return
+    }
+
+    setAddingUser(true)
+    setError(null)
     try {
       await axios.post(API_URL, newUser)
       setNewUser({ userName: "", password: "" })
-      fetchUsers()
+      setShowPassword({ ...showPassword, new: false })
+      await fetchUsers()
     } catch (err) {
       setError("Lỗi khi thêm người dùng!")
+      console.error("Add user error:", err)
     } finally {
-      setLoading(false)
+      setAddingUser(false)
     }
   }
 
   const handleEditClick = (user) => {
     setEditingUser(user.id)
     setEditUserData({ userName: user.username, password: "" })
+    setError(null)
   }
 
   const handleEditInputChange = (e) => {
@@ -63,32 +76,45 @@ function UserManager() {
 
   const handleUpdateUser = async (e) => {
     e.preventDefault()
-    setLoading(true)
+    if (!editUserData.userName.trim()) {
+      setError("Tên đăng nhập không được để trống!")
+      return
+    }
+
+    setUpdatingUser(true)
+    setError(null)
     try {
       await axios.put(`${API_URL}/${editingUser}`, editUserData)
       setEditingUser(null)
-      fetchUsers()
-    } catch {
+      setEditUserData({ userName: "", password: "" })
+      await fetchUsers()
+    } catch (err) {
       setError("Lỗi khi cập nhật người dùng!")
+      console.error("Update user error:", err)
     } finally {
-      setLoading(false)
+      setUpdatingUser(false)
     }
   }
 
   const handleCancelEdit = () => {
     setEditingUser(null)
+    setEditUserData({ userName: "", password: "" })
+    setError(null)
   }
 
   const handleDeleteUser = async (id) => {
     if (!window.confirm("Bạn có chắc chắn muốn xoá người dùng này?")) return
-    setLoading(true)
+
+    setDeletingUserId(id)
+    setError(null)
     try {
       await axios.delete(`${API_URL}/${id}`)
-      fetchUsers()
-    } catch {
+      await fetchUsers()
+    } catch (err) {
       setError("Lỗi khi xoá người dùng!")
+      console.error("Delete user error:", err)
     } finally {
-      setLoading(false)
+      setDeletingUserId(null)
     }
   }
 
@@ -143,6 +169,7 @@ function UserManager() {
               onChange={handleInputChange}
               required
               style={styles.input}
+              disabled={addingUser}
             />
           </div>
           <div style={styles.inputGroup}>
@@ -159,8 +186,14 @@ function UserManager() {
                 onChange={handleInputChange}
                 required
                 style={styles.passwordInput}
+                disabled={addingUser}
               />
-              <button type="button" onClick={() => togglePasswordVisibility("new")} style={styles.passwordToggle}>
+              <button
+                type="button"
+                onClick={() => togglePasswordVisibility("new")}
+                style={styles.passwordToggle}
+                disabled={addingUser}
+              >
                 {showPassword.new ? <EyeOff size={16} /> : <Eye size={16} />}
               </button>
             </div>
@@ -169,11 +202,11 @@ function UserManager() {
             type="submit"
             style={{
               ...styles.primaryButton,
-              ...(loading ? styles.buttonDisabled : {}),
+              ...(addingUser ? styles.buttonDisabled : {}),
             }}
-            disabled={loading}
+            disabled={addingUser}
           >
-            {loading ? (
+            {addingUser ? (
               <>
                 <Loader2 size={16} style={styles.spinner} />
                 Đang thêm...
@@ -190,7 +223,7 @@ function UserManager() {
 
       {/* Users Table */}
       <div style={styles.card}>
-        <h2 style={styles.cardTitle}>Danh sách người dùng</h2>
+        <h2 style={styles.cardTitle}>Danh sách người dùng ({users.length})</h2>
 
         {loading && users.length === 0 ? (
           <div style={styles.loadingContainer}>
@@ -209,120 +242,143 @@ function UserManager() {
                 </tr>
               </thead>
               <tbody>
-                {users.map((user, index) => (
-                  <>
-                    <tr
-                      key={user.id}
-                      style={{
-                        ...styles.tr,
-                        animationDelay: `${index * 0.1}s`,
-                      }}
-                    >
-                      <td style={styles.td}>#{user.id}</td>
-                      <td style={styles.td}>
-                        {editingUser === user.id ? (
-                          <input
-                            type="text"
-                            name="userName"
-                            value={editUserData.userName}
-                            onChange={handleEditInputChange}
-                            style={styles.inlineInput}
-                            autoFocus
-                          />
-                        ) : (
-                          <div style={styles.cellContent}>
-                            <User size={16} color="#6b7280" />
-                            {user.username}
-                          </div>
-                        )}
-                      </td>
-                      <td style={styles.td}>
-                        {user.rentalDTOS && user.rentalDTOS.length > 0 ? (
-                          <div>
-                            <button onClick={() => toggleUserExpansion(user.id)} style={styles.expandButton}>
-                              {user.rentalDTOS.length} lượt thuê
-                              <span
-                                style={{
-                                  transform: expandedUser === user.id ? "rotate(180deg)" : "rotate(0deg)",
-                                  transition: "transform 0.2s ease",
-                                }}
-                              >
-                                ▼
-                              </span>
-                            </button>
-                          </div>
-                        ) : (
-                          <span style={styles.noRentals}>0 lượt thuê</span>
-                        )}
-                      </td>
-                      <td style={styles.td}>
-                        <div style={styles.actionButtons}>
+                {users.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={{ ...styles.td, textAlign: "center", padding: "40px", color: "#6b7280" }}>
+                      Chưa có người dùng nào trong hệ thống
+                    </td>
+                  </tr>
+                ) : (
+                  users.map((user, index) => (
+                    <>
+                      <tr
+                        key={user.id}
+                        style={{
+                          ...styles.tr,
+                          animationDelay: `${index * 0.1}s`,
+                        }}
+                      >
+                        <td style={styles.td}>#{user.id}</td>
+                        <td style={styles.td}>
                           {editingUser === user.id ? (
-                            <>
-                              <div style={styles.passwordContainer}>
-                                <input
-                                  type={showPassword[user.id] ? "text" : "password"}
-                                  name="password"
-                                  placeholder="Mật khẩu mới"
-                                  value={editUserData.password}
-                                  onChange={handleEditInputChange}
-                                  style={styles.passwordInput}
-                                />
-                                <button
-                                  type="button"
-                                  onClick={() => togglePasswordVisibility(user.id)}
-                                  style={styles.passwordToggle}
-                                >
-                                  {showPassword[user.id] ? <EyeOff size={14} /> : <Eye size={14} />}
-                                </button>
-                              </div>
-                              <button onClick={handleUpdateUser} style={styles.saveButton}>
-                                <Save size={16} />
-                              </button>
-                              <button onClick={handleCancelEdit} style={styles.cancelButton}>
-                                <X size={16} />
-                              </button>
-                            </>
+                            <input
+                              type="text"
+                              name="userName"
+                              value={editUserData.userName}
+                              onChange={handleEditInputChange}
+                              style={styles.inlineInput}
+                              autoFocus
+                              disabled={updatingUser}
+                            />
                           ) : (
-                            <>
-                              <button onClick={() => handleEditClick(user)} style={styles.editButton}>
-                                <Edit2 size={16} />
-                              </button>
-                              <button onClick={() => handleDeleteUser(user.id)} style={styles.deleteButton}>
-                                <Trash2 size={16} />
-                              </button>
-                            </>
+                            <div style={styles.cellContent}>
+                              <User size={16} color="#6b7280" />
+                              {user.username}
+                            </div>
                           )}
-                        </div>
-                      </td>
-                    </tr>
-                    {expandedUser === user.id && user.rentalDTOS && (
-                      <tr style={styles.expandedRow}>
-                        <td colSpan={4} style={styles.expandedCell}>
-                          <div style={styles.rentalsList}>
-                            <h4 style={styles.rentalsTitle}>Chi tiết lượt thuê:</h4>
-                            {user.rentalDTOS.map((rental) => (
-                              <div key={rental.id} style={styles.rentalItem}>
-                                <div style={styles.rentalInfo}>
-                                  <span style={styles.carModel}>{rental.carModel}</span>
-                                  <span style={styles.rentalDate}>
-                                    {rental.rentalDate} - {rental.returnDate}
-                                  </span>
-                                  <span style={styles.totalPrice}>
-                                    {new Intl.NumberFormat("vi-VN", {
-                                      style: "currency",
-                                      currency: "VND",
-                                    }).format(rental.totalPrice)}
-                                  </span>
+                        </td>
+                        <td style={styles.td}>
+                          {user.rentalDTOS && user.rentalDTOS.length > 0 ? (
+                            <div>
+                              <button onClick={() => toggleUserExpansion(user.id)} style={styles.expandButton}>
+                                {user.rentalDTOS.length} lượt thuê
+                                <span
+                                  style={{
+                                    transform: expandedUser === user.id ? "rotate(180deg)" : "rotate(0deg)",
+                                    transition: "transform 0.2s ease",
+                                  }}
+                                >
+                                  ▼
+                                </span>
+                              </button>
+                            </div>
+                          ) : (
+                            <span style={styles.noRentals}>0 lượt thuê</span>
+                          )}
+                        </td>
+                        <td style={styles.td}>
+                          <div style={styles.actionButtons}>
+                            {editingUser === user.id ? (
+                              <>
+                                <div style={styles.passwordContainer}>
+                                  <input
+                                    type={showPassword[user.id] ? "text" : "password"}
+                                    name="password"
+                                    placeholder="Mật khẩu mới (tùy chọn)"
+                                    value={editUserData.password}
+                                    onChange={handleEditInputChange}
+                                    style={styles.passwordInput}
+                                    disabled={updatingUser}
+                                  />
+                                  <button
+                                    type="button"
+                                    onClick={() => togglePasswordVisibility(user.id)}
+                                    style={styles.passwordToggle}
+                                    disabled={updatingUser}
+                                  >
+                                    {showPassword[user.id] ? <EyeOff size={14} /> : <Eye size={14} />}
+                                  </button>
                                 </div>
-                              </div>
-                            ))}
+                                <button onClick={handleUpdateUser} style={styles.saveButton} disabled={updatingUser}>
+                                  {updatingUser ? <Loader2 size={16} style={styles.spinner} /> : <Save size={16} />}
+                                </button>
+                                <button onClick={handleCancelEdit} style={styles.cancelButton} disabled={updatingUser}>
+                                  <X size={16} />
+                                </button>
+                              </>
+                            ) : (
+                              <>
+                                <button
+                                  onClick={() => handleEditClick(user)}
+                                  style={styles.editButton}
+                                  disabled={deletingUserId === user.id}
+                                >
+                                  <Edit2 size={16} />
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteUser(user.id)}
+                                  style={styles.deleteButton}
+                                  disabled={deletingUserId === user.id}
+                                >
+                                  {deletingUserId === user.id ? (
+                                    <Loader2 size={16} style={styles.spinner} />
+                                  ) : (
+                                    <Trash2 size={16} />
+                                  )}
+                                </button>
+                              </>
+                            )}
                           </div>
                         </td>
                       </tr>
-                    )}
-                  </>
-                ))}
+                      {expandedUser === user.id && user.rentalDTOS && (
+                        <tr style={styles.expandedRow}>
+                          <td colSpan={4} style={styles.expandedCell}>
+                            <div style={styles.rentalsList}>
+                              <h4 style={styles.rentalsTitle}>Chi tiết lượt thuê:</h4>
+                              {user.rentalDTOS.map((rental) => (
+                                <div key={rental.id} style={styles.rentalItem}>
+                                  <div style={styles.rentalInfo}>
+                                    <span style={styles.carModel}>{rental.carModel}</span>
+                                    <span style={styles.rentalDate}>
+                                      {rental.rentalDate} - {rental.returnDate}
+                                    </span>
+                                    <span style={styles.totalPrice}>
+                                      {new Intl.NumberFormat("vi-VN", {
+                                        style: "currency",
+                                        currency: "VND",
+                                      }).format(rental.totalPrice)}
+                                    </span>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          </td>
+                        </tr>
+                      )}
+                    </>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -693,22 +749,22 @@ styleSheet.textContent = `
     background-color: #f8fafc;
   }
   
-  .edit-button:hover {
+  .edit-button:hover:not(:disabled) {
     background-color: #bae6fd;
     transform: scale(1.05);
   }
   
-  .delete-button:hover {
+  .delete-button:hover:not(:disabled) {
     background-color: #fecaca;
     transform: scale(1.05);
   }
   
-  .save-button:hover {
+  .save-button:hover:not(:disabled) {
     background-color: #bbf7d0;
     transform: scale(1.05);
   }
   
-  .cancel-button:hover {
+  .cancel-button:hover:not(:disabled) {
     background-color: #e5e7eb;
     transform: scale(1.05);
   }

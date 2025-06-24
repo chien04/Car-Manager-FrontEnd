@@ -2,10 +2,11 @@
 
 import { useEffect, useState, useCallback } from "react"
 import axios from "axios"
-import { Plus, Edit, Trash2, Car, DollarSign, Package, X } from "lucide-react"
+import { Plus, Edit, Trash2, Car, DollarSign, Package, X, Loader2 } from "lucide-react"
 
-const API_URL = "https://car-manager-kqaj.onrender.com/api/v1/cars"
+const CAR_API = "https://car-manager-kqaj.onrender.com/api/v1/cars"
 // const API_URL = "http://localhost:8080/api/v1/cars"
+
 const styles = {
   container: {
     minHeight: "100vh",
@@ -255,6 +256,21 @@ const styles = {
     cursor: "pointer",
     fontSize: "14px",
     transition: "background-color 0.2s",
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "8px",
+  },
+  loadingContainer: {
+    display: "flex",
+    alignItems: "center",
+    justifyContent: "center",
+    gap: "12px",
+    padding: "40px",
+    color: "#666",
+  },
+  spinner: {
+    animation: "spin 1s linear infinite",
   },
 }
 
@@ -293,17 +309,27 @@ function CarManager() {
   })
   const [isAddModalOpen, setIsAddModalOpen] = useState(false)
   const [isEditModalOpen, setIsEditModalOpen] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [addingCar, setAddingCar] = useState(false)
+  const [updatingCar, setUpdatingCar] = useState(false)
+  const [deletingCarId, setDeletingCarId] = useState(null)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     fetchCars()
   }, [])
 
   const fetchCars = async () => {
+    setLoading(true)
+    setError(null)
     try {
       const response = await axios.get(API_URL)
       setCars(response.data)
     } catch (error) {
-      alert("Lỗi khi lấy danh sách xe!")
+      setError("Lỗi khi lấy danh sách xe!")
+      console.error("Fetch cars error:", error)
+    } finally {
+      setLoading(false)
     }
   }
 
@@ -320,6 +346,13 @@ function CarManager() {
 
   const handleAddCar = async (e) => {
     e.preventDefault()
+    if (!newCar.model.trim() || !newCar.price || !newCar.amount || !newCar.brandId) {
+      setError("Vui lòng điền đầy đủ thông tin!")
+      return
+    }
+
+    setAddingCar(true)
+    setError(null)
     try {
       const payload = {
         ...newCar,
@@ -330,21 +363,28 @@ function CarManager() {
       await axios.post(API_URL, payload)
       setNewCar({ model: "", price: "", amount: "", brandId: "" })
       setIsAddModalOpen(false)
-      fetchCars()
+      await fetchCars()
     } catch (error) {
-      alert("Lỗi khi thêm xe mới!")
+      setError("Lỗi khi thêm xe mới!")
+      console.error("Add car error:", error)
+    } finally {
+      setAddingCar(false)
     }
   }
 
   const handleDeleteCar = async (id) => {
-    if (window.confirm("Bạn có chắc chắn muốn xóa xe này?")) {
-      try {
-        await axios.delete(`${API_URL}/${id}`)
-        fetchCars()
-      } catch (error) {
-        console.error("Error deleting car:", error)
-        alert("Xe đang được thuê không thể xoá!")
-      }
+    if (!window.confirm("Bạn có chắc chắn muốn xóa xe này?")) return
+
+    setDeletingCarId(id)
+    setError(null)
+    try {
+      await axios.delete(`${API_URL}/${id}`)
+      await fetchCars()
+    } catch (error) {
+      console.error("Error deleting car:", error)
+      setError("Xe đang được thuê không thể xoá!")
+    } finally {
+      setDeletingCarId(null)
     }
   }
 
@@ -356,10 +396,18 @@ function CarManager() {
       amount: car.amount.toString(),
     })
     setIsEditModalOpen(true)
+    setError(null)
   }
 
   const handleUpdateCar = async (e) => {
     e.preventDefault()
+    if (!editCarData.model.trim() || !editCarData.price || !editCarData.amount) {
+      setError("Vui lòng điền đầy đủ thông tin!")
+      return
+    }
+
+    setUpdatingCar(true)
+    setError(null)
     try {
       const payload = {
         model: editCarData.model,
@@ -369,15 +417,25 @@ function CarManager() {
       await axios.put(`${API_URL}/${editingCar}`, payload)
       setEditingCar(null)
       setIsEditModalOpen(false)
-      fetchCars()
+      await fetchCars()
     } catch (error) {
-      alert("Lỗi khi cập nhật xe!")
+      setError("Lỗi khi cập nhật xe!")
+      console.error("Update car error:", error)
+    } finally {
+      setUpdatingCar(false)
     }
   }
 
   const handleCancelEdit = () => {
     setEditingCar(null)
     setIsEditModalOpen(false)
+    setError(null)
+  }
+
+  const handleCloseAddModal = () => {
+    setIsAddModalOpen(false)
+    setNewCar({ model: "", price: "", amount: "", brandId: "" })
+    setError(null)
   }
 
   const formatPrice = (price) => {
@@ -400,6 +458,37 @@ function CarManager() {
           </div>
           <p style={styles.subtitle}>Quản lý danh sách xe và thông tin chi tiết</p>
         </div>
+
+        {/* Error Alert */}
+        {error && (
+          <div
+            style={{
+              backgroundColor: "#fee2e2",
+              color: "#dc2626",
+              padding: "12px 16px",
+              borderRadius: "8px",
+              marginBottom: "16px",
+              border: "1px solid #fecaca",
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+            }}
+          >
+            <span>{error}</span>
+            <button
+              onClick={() => setError(null)}
+              style={{
+                background: "none",
+                border: "none",
+                fontSize: "18px",
+                cursor: "pointer",
+                color: "#dc2626",
+              }}
+            >
+              ×
+            </button>
+          </div>
+        )}
 
         {/* Stats Cards */}
         <div style={styles.statsGrid}>
@@ -448,7 +537,7 @@ function CarManager() {
         <div style={styles.mainCard}>
           <div style={styles.cardHeader}>
             <div>
-              <h2 style={styles.cardTitle}>Danh sách xe</h2>
+              <h2 style={styles.cardTitle}>Danh sách xe ({cars.length})</h2>
               <p style={styles.cardSubtitle}>Quản lý thông tin các loại xe trong hệ thống</p>
             </div>
             <button onClick={() => setIsAddModalOpen(true)} style={styles.button}>
@@ -458,69 +547,84 @@ function CarManager() {
           </div>
 
           <div style={{ padding: "24px" }}>
-            <div style={{ overflowX: "auto" }}>
-              <table style={styles.table}>
-                <thead>
-                  <tr>
-                    <th style={styles.th}>ID</th>
-                    <th style={styles.th}>Model</th>
-                    <th style={styles.th}>Giá</th>
-                    <th style={styles.th}>Số lượng</th>
-                    <th style={styles.th}>Brand</th>
-                    <th style={{ ...styles.th, textAlign: "right" }}>Hành động</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {cars.length === 0 ? (
+            {loading && cars.length === 0 ? (
+              <div style={styles.loadingContainer}>
+                <Loader2 size={32} style={styles.spinner} />
+                <span>Đang tải...</span>
+              </div>
+            ) : (
+              <div style={{ overflowX: "auto" }}>
+                <table style={styles.table}>
+                  <thead>
                     <tr>
-                      <td colSpan={6} style={{ ...styles.td, textAlign: "center", padding: "32px", color: "#666" }}>
-                        Chưa có xe nào trong hệ thống
-                      </td>
+                      <th style={styles.th}>ID</th>
+                      <th style={styles.th}>Model</th>
+                      <th style={styles.th}>Giá</th>
+                      <th style={styles.th}>Số lượng</th>
+                      <th style={styles.th}>Brand</th>
+                      <th style={{ ...styles.th, textAlign: "right" }}>Hành động</th>
                     </tr>
-                  ) : (
-                    cars.map((car) => (
-                      <tr key={car.id} style={styles.tr}>
-                        <td style={{ ...styles.td, fontWeight: "500" }}>#{car.id}</td>
-                        <td style={{ ...styles.td, fontWeight: "500" }}>{car.model}</td>
-                        <td style={{ ...styles.td, color: "#2e7d32", fontWeight: "600" }}>{formatPrice(car.price)}</td>
-                        <td style={styles.td}>
-                          <span
-                            style={{
-                              ...styles.badge,
-                              ...(car.amount > 0 ? styles.badgeGreen : styles.badgeRed),
-                            }}
-                          >
-                            {car.amount} xe
-                          </span>
-                        </td>
-                        <td style={styles.td}>
-                          <span style={{ ...styles.badge, ...styles.badgeGray }}>{car.brand}</span>
-                        </td>
-                        <td style={{ ...styles.td, textAlign: "right" }}>
-                          <button
-                            onClick={() => handleEditClick(car)}
-                            style={{ ...styles.actionButton, ...styles.editButton }}
-                          >
-                            <Edit size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteCar(car.id)}
-                            style={{ ...styles.actionButton, ...styles.deleteButton }}
-                          >
-                            <Trash2 size={16} />
-                          </button>
+                  </thead>
+                  <tbody>
+                    {cars.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} style={{ ...styles.td, textAlign: "center", padding: "32px", color: "#666" }}>
+                          Chưa có xe nào trong hệ thống
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    ) : (
+                      cars.map((car) => (
+                        <tr key={car.id} style={styles.tr}>
+                          <td style={{ ...styles.td, fontWeight: "500" }}>#{car.id}</td>
+                          <td style={{ ...styles.td, fontWeight: "500" }}>{car.model}</td>
+                          <td style={{ ...styles.td, color: "#2e7d32", fontWeight: "600" }}>
+                            {formatPrice(car.price)}
+                          </td>
+                          <td style={styles.td}>
+                            <span
+                              style={{
+                                ...styles.badge,
+                                ...(car.amount > 0 ? styles.badgeGreen : styles.badgeRed),
+                              }}
+                            >
+                              {car.amount} xe
+                            </span>
+                          </td>
+                          <td style={styles.td}>
+                            <span style={{ ...styles.badge, ...styles.badgeGray }}>{car.brand}</span>
+                          </td>
+                          <td style={{ ...styles.td, textAlign: "right" }}>
+                            <button
+                              onClick={() => handleEditClick(car)}
+                              style={{ ...styles.actionButton, ...styles.editButton }}
+                              disabled={deletingCarId === car.id}
+                            >
+                              <Edit size={16} />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteCar(car.id)}
+                              style={{ ...styles.actionButton, ...styles.deleteButton }}
+                              disabled={deletingCarId === car.id}
+                            >
+                              {deletingCarId === car.id ? (
+                                <Loader2 size={16} style={styles.spinner} />
+                              ) : (
+                                <Trash2 size={16} />
+                              )}
+                            </button>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            )}
           </div>
         </div>
 
         {/* Add Car Modal */}
-        <Modal isOpen={isAddModalOpen} onClose={() => setIsAddModalOpen(false)} title="Thêm xe mới">
+        <Modal isOpen={isAddModalOpen} onClose={handleCloseAddModal} title="Thêm xe mới">
           <form onSubmit={handleAddCar}>
             <div style={styles.formGroup}>
               <label style={styles.label}>Model xe</label>
@@ -532,6 +636,7 @@ function CarManager() {
                 onChange={handleInputChange}
                 required
                 style={styles.input}
+                disabled={addingCar}
               />
             </div>
             <div style={styles.formGroup}>
@@ -544,6 +649,7 @@ function CarManager() {
                 onChange={handleInputChange}
                 required
                 style={styles.input}
+                disabled={addingCar}
               />
             </div>
             <div style={styles.formGroup}>
@@ -556,6 +662,7 @@ function CarManager() {
                 onChange={handleInputChange}
                 required
                 style={styles.input}
+                disabled={addingCar}
               />
             </div>
             <div style={styles.formGroup}>
@@ -568,14 +675,22 @@ function CarManager() {
                 onChange={handleInputChange}
                 required
                 style={styles.input}
+                disabled={addingCar}
               />
             </div>
             <div style={styles.buttonGroup}>
-              <button type="button" onClick={() => setIsAddModalOpen(false)} style={styles.cancelButton}>
+              <button type="button" onClick={handleCloseAddModal} style={styles.cancelButton} disabled={addingCar}>
                 Hủy
               </button>
-              <button type="submit" style={styles.submitButton}>
-                Thêm xe
+              <button type="submit" style={styles.submitButton} disabled={addingCar}>
+                {addingCar ? (
+                  <>
+                    <Loader2 size={16} style={styles.spinner} />
+                    Đang thêm...
+                  </>
+                ) : (
+                  "Thêm xe"
+                )}
               </button>
             </div>
           </form>
@@ -594,6 +709,7 @@ function CarManager() {
                 onChange={handleEditInputChange}
                 required
                 style={styles.input}
+                disabled={updatingCar}
               />
             </div>
             <div style={styles.formGroup}>
@@ -606,6 +722,7 @@ function CarManager() {
                 onChange={handleEditInputChange}
                 required
                 style={styles.input}
+                disabled={updatingCar}
               />
             </div>
             <div style={styles.formGroup}>
@@ -618,14 +735,22 @@ function CarManager() {
                 onChange={handleEditInputChange}
                 required
                 style={styles.input}
+                disabled={updatingCar}
               />
             </div>
             <div style={styles.buttonGroup}>
-              <button type="button" onClick={handleCancelEdit} style={styles.cancelButton}>
+              <button type="button" onClick={handleCancelEdit} style={styles.cancelButton} disabled={updatingCar}>
                 Hủy
               </button>
-              <button type="submit" style={styles.submitButton}>
-                Cập nhật
+              <button type="submit" style={styles.submitButton} disabled={updatingCar}>
+                {updatingCar ? (
+                  <>
+                    <Loader2 size={16} style={styles.spinner} />
+                    Đang cập nhật...
+                  </>
+                ) : (
+                  "Cập nhật"
+                )}
               </button>
             </div>
           </form>
@@ -634,5 +759,19 @@ function CarManager() {
     </div>
   )
 }
+
+// Add CSS animations
+const styleSheet = document.createElement("style")
+styleSheet.textContent = `
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+`
+document.head.appendChild(styleSheet)
 
 export default CarManager

@@ -2,16 +2,20 @@
 
 import { useEffect, useState, useCallback } from "react"
 import axios from "axios"
-import { Plus, Edit2, Trash2, Save, X, Car, Globe } from "lucide-react"
+import { Plus, Edit2, Trash2, Save, X, Car, Globe, Loader2 } from "lucide-react"
 
-const API_URL = "https://car-manager-kqaj.onrender.com/api/v1/brands"
-// const API_URL = "http://localhost:8080/api/v1/brands";
+const CAR_API = "https://car-manager-kqaj.onrender.com/api/v1/brands"
+// const API_URL = "http://localhost:8080/api/v1/brands"
+
 function BrandManager() {
   const [brands, setBrands] = useState([])
   const [newBrand, setNewBrand] = useState({ name: "", country: "" })
   const [editingBrand, setEditingBrand] = useState(null)
   const [editBrandData, setEditBrandData] = useState({ name: "", country: "" })
   const [loading, setLoading] = useState(false)
+  const [addingBrand, setAddingBrand] = useState(false)
+  const [updatingBrand, setUpdatingBrand] = useState(false)
+  const [deletingBrandId, setDeletingBrandId] = useState(null)
   const [error, setError] = useState(null)
 
   useEffect(() => {
@@ -26,6 +30,7 @@ function BrandManager() {
       setBrands(response.data)
     } catch (error) {
       setError("Lỗi khi lấy danh sách hãng xe!")
+      console.error("Fetch brands error:", error)
     } finally {
       setLoading(false)
     }
@@ -38,23 +43,29 @@ function BrandManager() {
 
   const handleAddBrand = async (e) => {
     e.preventDefault()
-    if (!newBrand.name.trim() || !newBrand.country.trim()) return
+    if (!newBrand.name.trim() || !newBrand.country.trim()) {
+      setError("Vui lòng điền đầy đủ thông tin!")
+      return
+    }
 
-    setLoading(true)
+    setAddingBrand(true)
+    setError(null)
     try {
       await axios.post(API_URL, newBrand)
       setNewBrand({ name: "", country: "" })
-      fetchBrands()
+      await fetchBrands()
     } catch (error) {
       setError("Lỗi khi thêm hãng xe!")
+      console.error("Add brand error:", error)
     } finally {
-      setLoading(false)
+      setAddingBrand(false)
     }
   }
 
   const handleEditClick = useCallback((brand) => {
     setEditingBrand(brand.id)
     setEditBrandData({ name: brand.name, country: brand.country })
+    setError(null)
   }, [])
 
   const handleEditInputChange = useCallback((e) => {
@@ -64,36 +75,45 @@ function BrandManager() {
 
   const handleUpdateBrand = async (e) => {
     e.preventDefault()
-    if (!editBrandData.name.trim() || !editBrandData.country.trim()) return
+    if (!editBrandData.name.trim() || !editBrandData.country.trim()) {
+      setError("Vui lòng điền đầy đủ thông tin!")
+      return
+    }
 
-    setLoading(true)
+    setUpdatingBrand(true)
+    setError(null)
     try {
       await axios.put(`${API_URL}/${editingBrand}`, editBrandData)
       setEditingBrand(null)
-      fetchBrands()
+      setEditBrandData({ name: "", country: "" })
+      await fetchBrands()
     } catch (error) {
       setError("Lỗi khi cập nhật hãng xe!")
+      console.error("Update brand error:", error)
     } finally {
-      setLoading(false)
+      setUpdatingBrand(false)
     }
   }
 
   const handleCancelEdit = useCallback(() => {
     setEditingBrand(null)
     setEditBrandData({ name: "", country: "" })
+    setError(null)
   }, [])
 
   const handleDeleteBrand = async (id) => {
     if (!window.confirm("Bạn có chắc chắn muốn xóa hãng xe này?")) return
 
-    setLoading(true)
+    setDeletingBrandId(id)
+    setError(null)
     try {
       await axios.delete(`${API_URL}/${id}`)
-      fetchBrands()
+      await fetchBrands()
     } catch (error) {
       setError("Brand không thể xóa vì có xe liên kết!")
+      console.error("Delete brand error:", error)
     } finally {
-      setLoading(false)
+      setDeletingBrandId(null)
     }
   }
 
@@ -197,6 +217,13 @@ function BrandManager() {
     color: "white",
   }
 
+  const disabledButtonStyle = {
+    ...buttonStyle,
+    backgroundColor: "#9ca3af",
+    color: "white",
+    cursor: "not-allowed",
+  }
+
   const tableStyle = {
     width: "100%",
     borderCollapse: "collapse",
@@ -227,6 +254,9 @@ function BrandManager() {
     borderRadius: "8px",
     marginBottom: "16px",
     border: "1px solid #fecaca",
+    display: "flex",
+    justifyContent: "space-between",
+    alignItems: "center",
   }
 
   const loadingStyle = {
@@ -235,6 +265,11 @@ function BrandManager() {
     justifyContent: "center",
     padding: "40px",
     color: "#6b7280",
+    gap: "12px",
+  }
+
+  const spinnerStyle = {
+    animation: "spin 1s linear infinite",
   }
 
   return (
@@ -244,7 +279,23 @@ function BrandManager() {
         Quản lý hãng xe
       </h1>
 
-      {error && <div style={errorStyle}>{error}</div>}
+      {error && (
+        <div style={errorStyle}>
+          <span>{error}</span>
+          <button
+            onClick={() => setError(null)}
+            style={{
+              background: "none",
+              border: "none",
+              fontSize: "18px",
+              cursor: "pointer",
+              color: "#dc2626",
+            }}
+          >
+            ×
+          </button>
+        </div>
+      )}
 
       <div style={cardStyle}>
         <h2 style={{ marginBottom: "20px", color: "#1e293b", fontSize: "20px", fontWeight: "600" }}>
@@ -261,6 +312,7 @@ function BrandManager() {
               onChange={handleInputChange}
               required
               style={inputStyle}
+              disabled={addingBrand}
               onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
               onBlur={(e) => Object.assign(e.target.style, inputStyle)}
             />
@@ -275,30 +327,43 @@ function BrandManager() {
               onChange={handleInputChange}
               required
               style={inputStyle}
+              disabled={addingBrand}
               onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
               onBlur={(e) => Object.assign(e.target.style, inputStyle)}
             />
           </div>
           <button
             type="submit"
-            style={primaryButtonStyle}
-            disabled={loading}
-            onMouseEnter={(e) => (e.target.style.backgroundColor = "#2563eb")}
-            onMouseLeave={(e) => (e.target.style.backgroundColor = "#3b82f6")}
+            style={addingBrand ? disabledButtonStyle : primaryButtonStyle}
+            disabled={addingBrand}
+            onMouseEnter={(e) => !addingBrand && (e.target.style.backgroundColor = "#2563eb")}
+            onMouseLeave={(e) => !addingBrand && (e.target.style.backgroundColor = "#3b82f6")}
           >
-            <Plus size={16} />
-            {loading ? "Đang thêm..." : "Thêm hãng xe"}
+            {addingBrand ? (
+              <>
+                <Loader2 size={16} style={spinnerStyle} />
+                Đang thêm...
+              </>
+            ) : (
+              <>
+                <Plus size={16} />
+                Thêm hãng xe
+              </>
+            )}
           </button>
         </form>
       </div>
 
       <div style={cardStyle}>
         <h2 style={{ marginBottom: "20px", color: "#1e293b", fontSize: "20px", fontWeight: "600" }}>
-          Danh sách hãng xe
+          Danh sách hãng xe ({brands.length})
         </h2>
 
         {loading && brands.length === 0 ? (
-          <div style={loadingStyle}>Đang tải...</div>
+          <div style={loadingStyle}>
+            <Loader2 size={32} style={spinnerStyle} />
+            <span>Đang tải...</span>
+          </div>
         ) : (
           <div style={{ overflowX: "auto" }}>
             <table style={tableStyle}>
@@ -311,95 +376,121 @@ function BrandManager() {
                 </tr>
               </thead>
               <tbody>
-                {brands.map((brand) => (
-                  <tr key={brand.id}>
-                    <td style={tdStyle}>{brand.id}</td>
-                    <td style={tdStyle}>
-                      {editingBrand === brand.id ? (
-                        <input
-                          type="text"
-                          name="name"
-                          value={editBrandData.name}
-                          onChange={handleEditInputChange}
-                          style={inputStyle}
-                          onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
-                          onBlur={(e) => Object.assign(e.target.style, inputStyle)}
-                          autoFocus
-                        />
-                      ) : (
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <Car size={16} />
-                          {brand.name}
-                        </div>
-                      )}
-                    </td>
-                    <td style={tdStyle}>
-                      {editingBrand === brand.id ? (
-                        <input
-                          type="text"
-                          name="country"
-                          value={editBrandData.country}
-                          onChange={handleEditInputChange}
-                          style={inputStyle}
-                          onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
-                          onBlur={(e) => Object.assign(e.target.style, inputStyle)}
-                        />
-                      ) : (
-                        <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
-                          <Globe size={16} />
-                          {brand.country}
-                        </div>
-                      )}
-                    </td>
-                    <td style={tdStyle}>
-                      <div style={{ display: "flex", gap: "8px" }}>
-                        {editingBrand === brand.id ? (
-                          <>
-                            <button
-                              onClick={handleUpdateBrand}
-                              style={successButtonStyle}
-                              onMouseEnter={(e) => (e.target.style.backgroundColor = "#059669")}
-                              onMouseLeave={(e) => (e.target.style.backgroundColor = "#10b981")}
-                            >
-                              <Save size={16} />
-                              Lưu
-                            </button>
-                            <button
-                              onClick={handleCancelEdit}
-                              style={secondaryButtonStyle}
-                              onMouseEnter={(e) => (e.target.style.backgroundColor = "#e5e7eb")}
-                              onMouseLeave={(e) => (e.target.style.backgroundColor = "#f3f4f6")}
-                            >
-                              <X size={16} />
-                              Hủy
-                            </button>
-                          </>
-                        ) : (
-                          <>
-                            <button
-                              onClick={() => handleEditClick(brand)}
-                              style={secondaryButtonStyle}
-                              onMouseEnter={(e) => (e.target.style.backgroundColor = "#e5e7eb")}
-                              onMouseLeave={(e) => (e.target.style.backgroundColor = "#f3f4f6")}
-                            >
-                              <Edit2 size={16} />
-                              Sửa
-                            </button>
-                            <button
-                              onClick={() => handleDeleteBrand(brand.id)}
-                              style={dangerButtonStyle}
-                              onMouseEnter={(e) => (e.target.style.backgroundColor = "#dc2626")}
-                              onMouseLeave={(e) => (e.target.style.backgroundColor = "#ef4444")}
-                            >
-                              <Trash2 size={16} />
-                              Xóa
-                            </button>
-                          </>
-                        )}
-                      </div>
+                {brands.length === 0 ? (
+                  <tr>
+                    <td colSpan={4} style={{ ...tdStyle, textAlign: "center", padding: "40px", color: "#6b7280" }}>
+                      Chưa có hãng xe nào trong hệ thống
                     </td>
                   </tr>
-                ))}
+                ) : (
+                  brands.map((brand) => (
+                    <tr key={brand.id}>
+                      <td style={tdStyle}>#{brand.id}</td>
+                      <td style={tdStyle}>
+                        {editingBrand === brand.id ? (
+                          <input
+                            type="text"
+                            name="name"
+                            value={editBrandData.name}
+                            onChange={handleEditInputChange}
+                            style={inputStyle}
+                            disabled={updatingBrand}
+                            onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
+                            onBlur={(e) => Object.assign(e.target.style, inputStyle)}
+                            autoFocus
+                          />
+                        ) : (
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <Car size={16} />
+                            {brand.name}
+                          </div>
+                        )}
+                      </td>
+                      <td style={tdStyle}>
+                        {editingBrand === brand.id ? (
+                          <input
+                            type="text"
+                            name="country"
+                            value={editBrandData.country}
+                            onChange={handleEditInputChange}
+                            style={inputStyle}
+                            disabled={updatingBrand}
+                            onFocus={(e) => Object.assign(e.target.style, inputFocusStyle)}
+                            onBlur={(e) => Object.assign(e.target.style, inputStyle)}
+                          />
+                        ) : (
+                          <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                            <Globe size={16} />
+                            {brand.country}
+                          </div>
+                        )}
+                      </td>
+                      <td style={tdStyle}>
+                        <div style={{ display: "flex", gap: "8px" }}>
+                          {editingBrand === brand.id ? (
+                            <>
+                              <button
+                                onClick={handleUpdateBrand}
+                                style={updatingBrand ? disabledButtonStyle : successButtonStyle}
+                                disabled={updatingBrand}
+                                onMouseEnter={(e) => !updatingBrand && (e.target.style.backgroundColor = "#059669")}
+                                onMouseLeave={(e) => !updatingBrand && (e.target.style.backgroundColor = "#10b981")}
+                              >
+                                {updatingBrand ? <Loader2 size={16} style={spinnerStyle} /> : <Save size={16} />}
+                                {updatingBrand ? "Đang lưu..." : "Lưu"}
+                              </button>
+                              <button
+                                onClick={handleCancelEdit}
+                                style={updatingBrand ? disabledButtonStyle : secondaryButtonStyle}
+                                disabled={updatingBrand}
+                                onMouseEnter={(e) => !updatingBrand && (e.target.style.backgroundColor = "#e5e7eb")}
+                                onMouseLeave={(e) => !updatingBrand && (e.target.style.backgroundColor = "#f3f4f6")}
+                              >
+                                <X size={16} />
+                                Hủy
+                              </button>
+                            </>
+                          ) : (
+                            <>
+                              <button
+                                onClick={() => handleEditClick(brand)}
+                                style={deletingBrandId === brand.id ? disabledButtonStyle : secondaryButtonStyle}
+                                disabled={deletingBrandId === brand.id}
+                                onMouseEnter={(e) =>
+                                  deletingBrandId !== brand.id && (e.target.style.backgroundColor = "#e5e7eb")
+                                }
+                                onMouseLeave={(e) =>
+                                  deletingBrandId !== brand.id && (e.target.style.backgroundColor = "#f3f4f6")
+                                }
+                              >
+                                <Edit2 size={16} />
+                                Sửa
+                              </button>
+                              <button
+                                onClick={() => handleDeleteBrand(brand.id)}
+                                style={deletingBrandId === brand.id ? disabledButtonStyle : dangerButtonStyle}
+                                disabled={deletingBrandId === brand.id}
+                                onMouseEnter={(e) =>
+                                  deletingBrandId !== brand.id && (e.target.style.backgroundColor = "#dc2626")
+                                }
+                                onMouseLeave={(e) =>
+                                  deletingBrandId !== brand.id && (e.target.style.backgroundColor = "#ef4444")
+                                }
+                              >
+                                {deletingBrandId === brand.id ? (
+                                  <Loader2 size={16} style={spinnerStyle} />
+                                ) : (
+                                  <Trash2 size={16} />
+                                )}
+                                {deletingBrandId === brand.id ? "Đang xóa..." : "Xóa"}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                )}
               </tbody>
             </table>
           </div>
@@ -408,5 +499,19 @@ function BrandManager() {
     </div>
   )
 }
+
+// Add CSS animations
+const styleSheet = document.createElement("style")
+styleSheet.textContent = `
+  @keyframes spin {
+    from {
+      transform: rotate(0deg);
+    }
+    to {
+      transform: rotate(360deg);
+    }
+  }
+`
+document.head.appendChild(styleSheet)
 
 export default BrandManager
