@@ -4,7 +4,7 @@ import { useEffect, useState } from "react"
 import axios from "axios"
 import { Plus, Edit2, Trash2, Save, X, User, Users, Eye, EyeOff, Loader2 } from "lucide-react"
 
-const USER_API = "https://car-manager-kqaj.onrender.com/api/v1/users"
+const API_URL = "https://car-manager-kqaj.onrender.com/api/v1/users"
 // const API_URL = "http://localhost:8080/api/v1/users"
 
 function UserManager() {
