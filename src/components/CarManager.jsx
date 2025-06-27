@@ -1,11 +1,13 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import axios from "axios"
+// import axios from "axios"
+import axios from "../AxiosConfig"
+
 import { Plus, Edit, Trash2, Car, DollarSign, Package, X, Loader2 } from "lucide-react"
 
-const API_URL = "https://car-manager-kqaj.onrender.com/api/v1/cars"
-// const API_URL = "http://localhost:8080/api/v1/cars"
+// const API_URL = "https://car-manager-kqaj.onrender.com/api/v1/cars"
+const API_URL = "http://localhost:8080/api/admin/cars"
 
 const styles = {
   container: {

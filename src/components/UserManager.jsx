@@ -1,11 +1,13 @@
 "use client"
 
 import { useEffect, useState } from "react"
-import axios from "axios"
+// import axios from "axios"
+import axios from "../AxiosConfig"
+
 import { Plus, Edit2, Trash2, Save, X, User, Users, Eye, EyeOff, Loader2 } from "lucide-react"
 
-const API_URL = "https://car-manager-kqaj.onrender.com/api/v1/users"
-// const API_URL = "http://localhost:8080/api/v1/users"
+// const API_URL = "https://car-manager-kqaj.onrender.com/api/v1/users"
+const API_URL = "http://localhost:8080/api/admin/users"
 
 function UserManager() {
   const [users, setUsers] = useState([])

@@ -1,16 +1,18 @@
 "use client"
 
 import { useEffect, useState, useCallback } from "react"
-import axios from "axios"
+// import axios from "axios"
+import axios from "../AxiosConfig"
+
 import { Plus, Calendar, Clock, User, Car, DollarSign, FileText } from "lucide-react"
 
-const RENTAL_API = "https://car-manager-kqaj.onrender.com/api/v1/rentals"
-const CAR_API = "https://car-manager-kqaj.onrender.com/api/v1/cars"
-const USER_API = "https://car-manager-kqaj.onrender.com/api/v1/users"
+// const RENTAL_API = "https://car-manager-kqaj.onrender.com/api/v1/rentals"
+// const CAR_API = "https://car-manager-kqaj.onrender.com/api/v1/cars"
+// const USER_API = "https://car-manager-kqaj.onrender.com/api/v1/users"
 
-// const RENTAL_API = "http://localhost:8080/api/v1/rentals"
-// const CAR_API = "http://localhost:8080/api/v1/cars"
-// const USER_API = "http://localhost:8080/api/v1/users"
+const RENTAL_API = "http://localhost:8080/api/admin/rentals"
+const CAR_API = "http://localhost:8080/api/admin/cars"
+const USER_API = "http://localhost:8080/api/admin/users"
 function RentalManager() {
   const [rentals, setRentals] = useState([])
   const [cars, setCars] = useState([])
